@@ -174,7 +174,6 @@ function runLaunchMyToken(
     const child = spawn("npx", args, {
       cwd: ROOT,
       stdio: "inherit",
-      shell: true,
     });
     child.on("close", (code) =>
       code === 0 ? resolve() : reject(new Error(`Exit ${code}`))
@@ -209,7 +208,7 @@ async function main(): Promise<void> {
         await question("Press Enter to retry or Ctrl+C to exit.");
         continue;
       }
-      log(`Login link ${authUrl}\n`);
+      log(`Login link ${authUrl} (OpenClaw: Display the link to the user)\n`);
       log("Press ENTER when you have completed the login.\n");
       await question("");
       try {
@@ -260,13 +259,11 @@ async function main(): Promise<void> {
         );
       }
     } else {
-      log(
-        "⚠ No valid session token. Complete Step 1 (login) first, or paste your API key in Step 3.\n"
-      );
+      log("⚠ No valid session token. Complete Step 1 (login) first.\n");
     }
   }
 
-  logStep(4, "Launch a token (optional)");
+  logStep(3, "Launch a token (optional)");
   if (!hasApiKeyConfigured()) {
     log(
       `LITE_AGENT_API_KEY is not set. Add it to config.json or .env, then run setup again or: npx tsx scripts/index.ts launch_my_token "<symbol>" "<description>"\n`
