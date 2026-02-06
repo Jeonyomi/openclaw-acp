@@ -4,6 +4,8 @@
 // For now they only log — swap with real HTTP calls when the API is ready.
 // =============================================================================
 
+import client from "../../scripts/client";
+
 // ── Accept / Reject ─────────────────────────────────────────────────────────
 
 export interface AcceptOrRejectParams {
@@ -13,57 +15,59 @@ export interface AcceptOrRejectParams {
 
 export async function acceptOrRejectJob(
   jobId: number,
-  params: AcceptOrRejectParams,
+  params: AcceptOrRejectParams
 ): Promise<void> {
   console.log(
-    `[sellerApi] acceptOrRejectJob  jobId=${jobId}  accept=${params.accept}  reason=${params.reason ?? "(none)"}`,
+    `[sellerApi] acceptOrRejectJob  jobId=${jobId}  accept=${
+      params.accept
+    }  reason=${params.reason ?? "(none)"}`
   );
-  // TODO: real API call — POST /acp/jobs/:jobId/respond  { accept, reason }
+
+  await client.post(`/acp/providers/jobs/${jobId}/accept`, params);
 }
 
 // ── Payment request ─────────────────────────────────────────────────────────
 
 export interface RequestPaymentParams {
-  amount: number;
-  /** Token contract address. */
-  ca: string;
-  /** "request" = payable request; "transfer" = payable transfer (with funds). */
-  mode: "request" | "transfer";
+  content: string;
+  payableDetails?: {
+    amount: number;
+    tokenAddress: string;
+    recipient: string;
+  };
 }
 
 export async function requestPayment(
   jobId: number,
-  params: RequestPaymentParams,
+  params: RequestPaymentParams
 ): Promise<void> {
-  console.log(
-    `[sellerApi] requestPayment  jobId=${jobId}  amount=${params.amount}  ca=${params.ca}  mode=${params.mode}`,
-  );
-  // TODO: real API call — POST /acp/jobs/:jobId/payment  { amount, ca, mode }
+  await client.post(`/acp/providers/jobs/${jobId}/requirement`, params);
 }
 
 // ── Deliver ─────────────────────────────────────────────────────────────────
 
 export interface DeliverJobParams {
   deliverable: string | { type: string; value: unknown };
-  transfer?: {
-    ca: string;
+  payableDetails?: {
     amount: number;
+    tokenAddress: string;
   };
 }
 
 export async function deliverJob(
   jobId: number,
-  params: DeliverJobParams,
+  params: DeliverJobParams
 ): Promise<void> {
   const delivStr =
     typeof params.deliverable === "string"
       ? params.deliverable
       : JSON.stringify(params.deliverable);
-  const transferStr = params.transfer
-    ? `  transfer: ${params.transfer.amount} @ ${params.transfer.ca}`
+  const transferStr = params.payableDetails
+    ? `  transfer: ${params.payableDetails.amount} @ ${params.payableDetails.tokenAddress}`
     : "";
   console.log(
-    `[sellerApi] deliverJob  jobId=${jobId}  deliverable=${delivStr}${transferStr}`,
+    `[sellerApi] deliverJob  jobId=${jobId}  deliverable=${delivStr}${transferStr}`
   );
-  // TODO: real API call — POST /acp/jobs/:jobId/deliver  { deliverable, transfer? }
+
+  return await client.post(`/acp/providers/jobs/${jobId}/deliverable`, params);
 }

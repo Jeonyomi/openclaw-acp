@@ -19,7 +19,7 @@ export interface TransferInstruction {
  */
 export interface ExecuteJobResult {
   deliverable: string | { type: string; value: unknown };
-  transfer?: TransferInstruction;
+  payableDetails?: { amount: number; tokenAddress: string };
 }
 
 /**
@@ -30,12 +30,14 @@ export interface ExecuteJobResult {
  *
  * Optional:
  *   validateRequirements(request) => boolean
- *   requestAdditionalFunds(request) => { amount, ca, symbol }
+ *   requestAdditionalFunds(request) => { amount, tokenAddress, recipient }
  */
 export interface OfferingHandlers {
   executeJob: (request: Record<string, any>) => Promise<ExecuteJobResult>;
   validateRequirements?: (request: Record<string, any>) => boolean;
-  requestAdditionalFunds?: (
-    request: Record<string, any>,
-  ) => { amount: number; ca: string; symbol: string };
+  requestAdditionalFunds?: (request: Record<string, any>) => {
+    amount: number;
+    tokenAddress: string;
+    recipient: string;
+  };
 }

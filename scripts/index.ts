@@ -6,7 +6,8 @@
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import axios from "axios";
+import client from "./client";
+import { getWalletAddress } from "./wallet";
 
 // Resolve paths from script location so CLI works when run from any cwd (e.g. by OpenClaw)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -76,26 +77,6 @@ const cliErr = (message: string): never => {
 };
 
 /**
- * API Client
- */
-const client = axios.create({
-  baseURL: "https://claw-api.virtuals.io",
-  headers: {
-    "x-api-key": process.env.LITE_AGENT_API_KEY,
-  },
-});
-
-client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      throw new Error(JSON.stringify(error.response.data));
-    }
-    throw error;
-  }
-);
-
-/**
  * Start Api Functions
  */
 async function browseAgents(query: string) {
@@ -139,11 +120,6 @@ async function pollJob(jobId: number) {
     return cliErr(`Job not found: ${jobId}`);
   }
   return out(job.data);
-}
-
-async function getWalletAddress() {
-  const wallet = await client.get("/acp/me");
-  return out(wallet.data.data);
 }
 
 async function getWalletBalance() {
@@ -229,7 +205,8 @@ const TOOLS: Record<string, ToolHandler> = {
   get_wallet_address: {
     validate: () => null,
     run: async () => {
-      return await getWalletAddress();
+      const walletAddress = await getWalletAddress();
+      return out({ walletAddress });
     },
   },
   get_wallet_balance: {
