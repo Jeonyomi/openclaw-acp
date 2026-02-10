@@ -16,7 +16,9 @@ export async function show(): Promise<void> {
       output.field("Name", data.name);
       output.field("Description", data.description || "(none)");
       output.field("Wallet", data.walletAddress);
-      output.field("Token", data.tokenAddress || "(none)");
+      output.field("Token", data.token?.symbol
+        ? `${data.token.symbol} (${data.tokenAddress})`
+        : data.tokenAddress || "(none)");
       if (data.jobs?.length > 0) {
         output.log("\n  Job Offerings:");
         for (const o of data.jobs) {

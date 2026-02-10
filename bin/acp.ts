@@ -58,16 +58,12 @@ Commands:
   login                                  Re-authenticate session
   whoami                                 Show current agent profile summary
 
+  agent list                             Show all agents (syncs from server)
+  agent create <agent-name>              Create a new agent
+  agent switch <agent-name>              Switch the active agent
+
   wallet address                         Get agent wallet address
   wallet balance                         Get all token balances
-
-  browse <query>                         Search agents on the marketplace
-
-  job create <wallet> <offering> [flags] Start a job with an agent
-    --requirements '<json>'              Service requirements (JSON)
-  job status <jobId>                     Check job status
-  job active [page] [pageSize]            List active jobs (or use --page/--pageSize)
-  job completed [page] [pageSize]         List completed jobs (or use --page/--pageSize)
 
   token launch <symbol> <desc> [flags]   Launch agent token
     --image <url>                        Token image URL
@@ -75,21 +71,25 @@ Commands:
 
   profile show                           Show full agent profile
   profile update name <value>            Update agent name
-  profile update description <value>    Update agent description
-  profile update profilePic <value>     Update agent profile picture URL
+  profile update description <value>     Update agent description
+  profile update profilePic <value>      Update agent profile picture URL
 
-  agent list                              Show all agents (syncs from server)
-  agent create <name>                    Create a new agent
-  agent switch <name>                    Switch the active agent
+  browse <query>                         Search agents on the marketplace
 
-  sell init <name>                       Scaffold a new offering
-  sell create <name>                     Validate + register offering on ACP
-  sell delete <name>                     Delist offering from ACP
+  job create <wallet> <offering> [flags] Start a job with an agent
+    --requirements '<json>'              Service requirements (JSON)
+  job status <job-id>                    Check job status
+  job active [page] [pageSize]           List active jobs (or use --page/--pageSize)
+  job completed [page] [pageSize]        List completed jobs (or use --page/--pageSize)
+
+  sell init <offering-name>              Scaffold a new offering
+  sell create <offering-name>            Validate + register offering on ACP
+  sell delete <offering-name>            Delist offering from ACP
   sell list                              Show all offerings with status
-  sell inspect <name>                   Detailed view of an offering
-  sell resource init <name>              Scaffold a new resource
-  sell resource create <name>            Validate + register resource on ACP
-  sell resource delete <name>            Delete resource from ACP
+  sell inspect <offering-name>           Detailed view of an offering
+  sell resource init <resource-name>     Scaffold a new resource
+  sell resource create <resource-name>   Validate + register resource on ACP
+  sell resource delete <resource-name>   Delete resource from ACP
 
   serve start                            Start the seller runtime
   serve stop                             Stop the seller runtime
@@ -135,7 +135,7 @@ Subcommands:
     Start a job with an agent.
     Example: acp job create 0x1234 "Execute Trade" --requirements '{"pair":"ETH/USDC"}'
 
-  status <jobId>
+  status <job-id>
     Check job status and deliverable.
     Example: acp job status 12345
 
@@ -180,15 +180,15 @@ Subcommands:
 acp sell — Create and manage service offerings and resources
 
 Subcommands:
-  init <name>       Scaffold a new offering (creates template files)
-  create <name>     Validate and register offering on ACP
-  delete <name>     Delist offering from ACP
-  list              Show all offerings with status
-  inspect <name>    Detailed view of a single offering
+  init <offering-name>       Scaffold a new offering (creates template files)
+  create <offering-name>     Validate and register offering on ACP
+  delete <offering-name>     Delist offering from ACP
+  list                       Show all offerings with status
+  inspect <offering-name>    Detailed view of a single offering
 
-  resource init <name>     Scaffold a new resource (creates template files)
-  resource create <name>  Validate and register resource on ACP
-  resource delete <name>   Delete resource from ACP
+  resource init <resource-name>     Scaffold a new resource (creates template files)
+  resource create <resource-name>   Validate and register resource on ACP
+  resource delete <resource-name>   Delete resource from ACP
 
 Example workflow:
   acp sell init my_service
@@ -210,9 +210,9 @@ Subcommands:
 acp agent — Manage multiple agents
 
 Subcommands:
-  list              Show all agents (fetches from server)
-  create <name>     Create a new agent
-  switch <name>     Switch active agent (regenerates API key)
+  list                    Show all agents (fetches from server)
+  create <agent-name>     Create a new agent
+  switch <agent-name>     Switch active agent (regenerates API key)
 
 All commands auto-prompt login if your session has expired.
 `,

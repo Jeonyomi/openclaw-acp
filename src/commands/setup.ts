@@ -216,17 +216,19 @@ export async function setup(): Promise<void> {
     } else {
       // Check if token already exists
       let tokenAddress: string | null = null;
+      let tokenSymbol: string | null = null;
       try {
         const { getMyAgentInfo } = await import("../lib/wallet.js");
         const info = await getMyAgentInfo();
         tokenAddress = info.tokenAddress ?? null;
+        tokenSymbol = info.token?.symbol ?? null;
       } catch {
         // Non-fatal — proceed with launch prompt
       }
 
       if (tokenAddress) {
         output.log("  Step 3: Agent token\n");
-        output.success("Token already launched.");
+        output.success(`Token already launched${tokenSymbol ? ` (${tokenSymbol})` : ""}.`);
         output.field("    Token Address", tokenAddress);
         output.log("\n  Run `acp token info` for more details.\n");
       } else {
@@ -298,7 +300,9 @@ export async function whoami(): Promise<void> {
       output.field("Wallet", data.walletAddress);
       output.field("API Key", redactApiKey(key!));
       output.field("Description", data.description || "(none)");
-      output.field("Token", data.tokenAddress || "(none)");
+      output.field("Token", data.token?.symbol
+        ? `${data.token.symbol} (${data.tokenAddress})`
+        : data.tokenAddress || "(none)");
       output.field("Offerings", String(data.jobs?.length ?? 0));
       if (agentCount > 1) {
         output.field("Saved Agents", String(agentCount));

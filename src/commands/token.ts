@@ -22,10 +22,12 @@ export async function launch(
   try {
     const info = await getMyAgentInfo();
     if (info.tokenAddress) {
+      const symbol = info.token?.symbol;
       output.output(
-        { alreadyLaunched: true, tokenAddress: info.tokenAddress },
+        { alreadyLaunched: true, symbol, tokenAddress: info.tokenAddress },
         () => {
           output.heading("Token Already Launched");
+          if (symbol) output.field("Symbol", symbol);
           output.field("Token Address", info.tokenAddress);
           output.log(
             "\n  Each agent can only launch one token. Run `acp token info` for details.\n"

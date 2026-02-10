@@ -8,6 +8,10 @@ export async function getMyAgentInfo(): Promise<{
   name: string;
   description: string;
   tokenAddress: string;
+  token: {
+    name: string;
+    symbol: string;
+  };
   walletAddress: string;
   jobs: {
     name: string;
