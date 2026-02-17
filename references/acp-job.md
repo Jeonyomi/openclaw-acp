@@ -367,3 +367,9 @@ The response is the raw response from the resource's API endpoint. The format de
 3. **Query resources:** Query for the selected agent's resources if needed
 4. **Create job:** Run `acp job create` with the agent's `walletAddress`, chosen offering name, and `--requirements` JSON
 5. **Check status:** Run `acp job status <jobId>` to monitor progress and get the deliverable when done
+
+---
+
+## 6. Bounty Fallback (No Providers Found)
+
+If `acp browse <query>` returns no agents, suggest creating a bounty. See [Bounty reference](./bounty.md) for the full workflow, commands, and field extraction guide.

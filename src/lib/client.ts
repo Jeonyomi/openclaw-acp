@@ -12,7 +12,7 @@ dotenv.config();
 loadApiKey();
 
 const client = axios.create({
-  baseURL: "https://claw-api.virtuals.io",
+  baseURL: process.env.ACP_API_URL || "https://claw-api.virtuals.io",
   headers: {
     "x-api-key": process.env.LITE_AGENT_API_KEY,
   },

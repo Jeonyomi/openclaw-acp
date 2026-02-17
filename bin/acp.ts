@@ -10,10 +10,12 @@
 //   --version    Show version
 // =============================================================================
 
+import { createRequire } from "module";
 import { setJsonMode } from "../src/lib/output.js";
 import { requireApiKey } from "../src/lib/config.js";
 
-const VERSION = "0.2.0";
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require("../package.json");
 
 // -- Arg parsing helpers --
 
@@ -111,6 +113,16 @@ function buildHelp(): string {
     cmd("job status <job-id>", "Check job status"),
     cmd("job active [page] [pageSize]", "List active jobs"),
     cmd("job completed [page] [pageSize]", "List completed jobs"),
+    cmd("bounty create [query]", "Create a new bounty (interactive or flags)"),
+    flag("--title <text>", "Bounty title"),
+    flag("--description <text>", "Bounty description"),
+    flag("--budget <number>", "Budget in USD"),
+    flag("--category <digital|physical>", "Category (default: digital)"),
+    flag("--tags <csv>", "Comma-separated tags"),
+    cmd("bounty poll", "Poll all active bounties (cron-safe)"),
+    cmd("bounty list", "List active local bounties"),
+    cmd("bounty status <bounty-id>", "Get bounty match status"),
+    cmd("bounty select <bounty-id>", "Select candidate and create ACP job"),
     "",
     cmd("resource query <url>", "Query an agent's resource by URL"),
     flag("--params '<json>'", "Parameters for the resource (JSON)"),
@@ -132,6 +144,23 @@ function buildHelp(): string {
     cmd("serve status", "Show seller runtime status"),
     cmd("serve logs", "Show recent seller logs"),
     flag("--follow, -f", "Tail logs in real time"),
+    flag("--offering <name>", "Filter logs by offering name"),
+    flag("--job <id>", "Filter logs by job ID"),
+    flag("--level <level>", "Filter logs by level (e.g. error)"),
+    "",
+    section("Cloud Deployment"),
+    cmd("serve deploy railway", "Deploy seller runtime to Railway"),
+    cmd("serve deploy railway setup", "First-time Railway project setup"),
+    cmd("serve deploy railway status", "Show remote deployment status"),
+    cmd("serve deploy railway logs", "Show remote deployment logs"),
+    flag("--follow, -f", "Tail logs in real time"),
+    flag("--offering <name>", "Filter logs by offering name"),
+    flag("--job <id>", "Filter logs by job ID"),
+    flag("--level <level>", "Filter logs by level (e.g. error)"),
+    cmd("serve deploy railway teardown", "Remove Railway deployment"),
+    cmd("serve deploy railway env", "List env vars on Railway"),
+    cmd("serve deploy railway env set", "Set env var (KEY=value)"),
+    cmd("serve deploy railway env delete", "Delete an env var"),
     "",
     section("Flags"),
     flag("--json", "Output raw JSON (for agents/scripts)"),
@@ -222,6 +251,32 @@ function buildCommandHelp(command: string): string | undefined {
       "",
     ].join("\n"),
 
+    bounty: () => [
+      "",
+      `  ${bold("acp bounty")} ${dim("— Manage local bounty lifecycle")}`,
+      "",
+      cmd("create [query]", "Create a bounty (interactive or via flags)"),
+      `    ${dim("Interactive:  acp bounty create \"video production\"")}`,
+      `    ${dim("With flags:   acp bounty create --title \"Music video\" --budget 50 --tags \"video,music\" --json")}`,
+      "",
+      flag("--title <text>", "Bounty title (triggers non-interactive mode)"),
+      flag("--description <text>", "Description (defaults to title)"),
+      flag("--budget <number>", "Budget in USD"),
+      flag("--category <digital|physical>", "Category (default: digital)"),
+      flag("--tags <csv>", "Comma-separated tags"),
+      flag("--source-channel <name>", "Channel where bounty originated (e.g. telegram, webchat)"),
+      "",
+      cmd("poll", "Poll all active bounties and update local state"),
+      cmd("list", "List active local bounties"),
+      cmd("status <bounty-id>", "Fetch remote match status for a bounty"),
+      cmd(
+        "select <bounty-id>",
+        "Pick pending_match candidate, create ACP job, confirm match"
+      ),
+      cmd("cleanup <bounty-id>", "Remove local bounty state"),
+      "",
+    ].join("\n"),
+
     token: () => [
       "",
       `  ${bold("acp token")} ${dim("— Manage your agent token")}`,
@@ -279,6 +334,44 @@ function buildCommandHelp(command: string): string | undefined {
       cmd("status", "Show whether the seller is running"),
       cmd("logs", "Show recent seller logs (last 50 lines)"),
       flag("--follow, -f", "Tail logs in real time (Ctrl+C to stop)"),
+      flag("--offering <name>", "Filter logs by offering name"),
+      flag("--job <id>", "Filter logs by job ID"),
+      flag("--level <level>", "Filter logs by level (e.g. error)"),
+      "",
+      cmd("deploy railway", "Deploy seller runtime to Railway"),
+      cmd("deploy railway setup", "First-time Railway project setup"),
+      cmd("deploy railway status", "Show remote deployment status"),
+      cmd("deploy railway logs", "Show remote deployment logs"),
+      flag("--follow, -f", "Tail logs in real time"),
+      flag("--offering <name>", "Filter logs by offering name"),
+      flag("--job <id>", "Filter logs by job ID"),
+      flag("--level <level>", "Filter logs by level (e.g. error)"),
+      cmd("deploy railway teardown", "Remove Railway deployment"),
+      cmd("deploy railway env", "List env vars on Railway"),
+      cmd("deploy railway env set KEY=val", "Set an env var"),
+      cmd("deploy railway env delete KEY", "Delete an env var"),
+      "",
+    ].join("\n"),
+
+    deploy: () => [
+      "",
+      `  ${bold("acp serve deploy")} ${dim("— Deploy seller runtime to the cloud")}`,
+      "",
+      `  ${dim("Workflow:")}`,
+      `    acp serve deploy railway setup    ${dim("# First-time setup")}`,
+      `    acp sell init my_service          ${dim("# Create offering")}`,
+      `    acp sell create my_service        ${dim("# Register on ACP")}`,
+      `    acp serve deploy railway          ${dim("# Deploy to Railway")}`,
+      "",
+      `  ${dim("Management:")}`,
+      `    acp serve deploy railway status       ${dim("# Check deployment")}`,
+      `    acp serve deploy railway logs -f      ${dim("# Tail logs")}`,
+      `    acp serve deploy railway teardown     ${dim("# Remove deployment")}`,
+      "",
+      `  ${dim("Environment Variables:")}`,
+      `    acp serve deploy railway env              ${dim("# List env vars")}`,
+      `    acp serve deploy railway env set KEY=val  ${dim("# Set an env var")}`,
+      `    acp serve deploy railway env delete KEY   ${dim("# Delete an env var")}`,
       "",
     ].join("\n"),
 
@@ -329,6 +422,11 @@ async function main(): Promise<void> {
   const [command, subcommand, ...rest] = args;
 
   // Commands that don't need API key
+  if (command === "version") {
+    console.log(VERSION);
+    return;
+  }
+
   if (command === "setup") {
     const { setup } = await import("../src/commands/setup.js");
     return setup();
@@ -463,6 +561,45 @@ async function main(): Promise<void> {
       return;
     }
 
+    case "bounty": {
+      const bounty = await import("../src/commands/bounty.js");
+      if (subcommand === "create") {
+        // Check for structured flags (non-interactive mode)
+        const titleFlag = getFlagValue(rest, "--title");
+        const descFlag = getFlagValue(rest, "--description");
+        const budgetFlag = getFlagValue(rest, "--budget");
+        const categoryFlag = getFlagValue(rest, "--category");
+        const tagsFlag = getFlagValue(rest, "--tags");
+        const sourceChannelFlag = getFlagValue(rest, "--source-channel");
+
+        if (titleFlag || budgetFlag) {
+          // Non-interactive: all from flags
+          const budget = budgetFlag != null ? Number(budgetFlag) : undefined;
+          return bounty.create(undefined, {
+            title: titleFlag,
+            description: descFlag,
+            budget: Number.isFinite(budget) ? budget : undefined,
+            category: categoryFlag,
+            tags: tagsFlag,
+            sourceChannel: sourceChannelFlag,
+          });
+        }
+
+        // Interactive fallback: treat remaining positional args as query seed
+        const query = rest
+          .filter((a) => a != null && !String(a).startsWith("-"))
+          .join(" ");
+        return bounty.create(query || undefined, { sourceChannel: sourceChannelFlag });
+      }
+      if (subcommand === "poll") return bounty.poll();
+      if (subcommand === "list") return bounty.list();
+      if (subcommand === "status") return bounty.status(rest[0]);
+      if (subcommand === "select") return bounty.select(rest[0]);
+      if (subcommand === "cleanup") return bounty.cleanup(rest[0]);
+      console.log(buildCommandHelp("bounty"));
+      return;
+    }
+
     case "token": {
       const token = await import("../src/commands/token.js");
       if (subcommand === "launch") {
@@ -516,8 +653,47 @@ async function main(): Promise<void> {
       if (subcommand === "start") return serve.start();
       if (subcommand === "stop") return serve.stop();
       if (subcommand === "status") return serve.status();
-      if (subcommand === "logs")
-        return serve.logs(hasFlag(rest, "--follow", "-f"));
+      if (subcommand === "logs") {
+        const filter = {
+          offering: getFlagValue(rest, "--offering"),
+          job: getFlagValue(rest, "--job"),
+          level: getFlagValue(rest, "--level"),
+        };
+        return serve.logs(hasFlag(rest, "--follow", "-f"), filter);
+      }
+      if (subcommand === "deploy") {
+        const deploy = await import("../src/commands/deploy.js");
+        const provider = rest[0];
+        if (provider === "railway") {
+          const providerSub = rest[1];
+          if (!providerSub) return deploy.deploy();
+          if (providerSub === "setup") return deploy.setup();
+          if (providerSub === "status") return deploy.status();
+          if (providerSub === "logs") {
+            const logsArgs = rest.slice(2);
+            const filter = {
+              offering: getFlagValue(logsArgs, "--offering"),
+              job: getFlagValue(logsArgs, "--job"),
+              level: getFlagValue(logsArgs, "--level"),
+            };
+            return deploy.logs(
+              hasFlag(logsArgs, "--follow", "-f"),
+              filter
+            );
+          }
+          if (providerSub === "teardown") return deploy.teardown();
+          if (providerSub === "env") {
+            const envAction = rest[2];
+            if (!envAction) return deploy.env();
+            if (envAction === "set") return deploy.envSet(rest[3]);
+            if (envAction === "delete") return deploy.envDelete(rest[3]);
+            console.log(buildCommandHelp("deploy"));
+            return;
+          }
+        }
+        console.log(buildCommandHelp("deploy"));
+        return;
+      }
       console.log(buildCommandHelp("serve"));
       return;
     }

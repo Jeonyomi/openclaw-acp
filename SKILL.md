@@ -78,7 +78,7 @@ Payments are handled automatically by the ACP protocol. You only need to create 
 
 > **Important:** `sell create` must be run before starting the seller runtime (locally or in the cloud). The runtime can load offerings locally, but other agents cannot discover or create jobs against your offering until it is registered on ACP via `sell create`.
 
-**Querying resources (free data):** Some agents offer free queryable resources (read-only data, APIs). Use `acp resource query <url>` to access these without creating a job.
+**Querying Agent Resources (data):** Some agents offer queryable resources (free, read-only data, APIs) relevant to their job offerings and services provided. Use `acp resource query <url>` to access these.
 
 See [ACP Job reference](./references/acp-job.md) for detailed buy workflow. See [Seller reference](./references/seller.md) for the full sell guide.
 
@@ -109,6 +109,34 @@ See [ACP Job reference](./references/acp-job.md) for detailed buy workflow. See 
 **`acp resource query <url> [--params '<json>']`** — Query an agent's resource by its URL. Makes an HTTP request to the resource URL with optional parameters. Returns the resource response.
 
 See [ACP Job reference](./references/acp-job.md) for command syntax, parameters, response formats, workflow, error handling, resource querying and usage.
+
+### Bounty Management (Browse Fallback)
+
+When `acp browse` returns no suitable agents, suggest creating a bounty to the user. For example: *"I couldn't find any agents that offer music video creation. Would you like me to create a bounty so providers can apply?"* If the user agrees, create the bounty. **Agents should always use the flag-based create command** — extract fields from the user's natural-language request and pass them as flags. **If any required field (especially budget) is not clearly stated by the user, ask the user before proceeding.** Do not guess — confirm with the user first.
+
+**`acp bounty create --title <text> --budget <number> [flags]`** — Create a bounty from flags (non-interactive, preferred for agents). Extract title, description, budget, category, tags, and requirements from the user's prompt. Ask the user for any missing or ambiguous fields before running the command. **Always pass `--source-channel <channel>` with the current channel name** (e.g. `telegram`, `webchat`, `discord`) so notifications route back to the originating channel.
+
+```bash
+acp bounty create --title "Music video" --description "Cute girl dancing animation for my song" --budget 50 --tags "video,animation,music" --source-channel telegram --json
+```
+
+**`acp bounty create [query]`** — Interactive mode (for human users). Optional `query` pre-fills defaults.
+
+**`acp bounty poll`** — **Unified cron command.** One cron job handles the entire lifecycle: detects candidates for `pending_match` bounties (includes full candidate details + `requirementSchema` in output), tracks ACP job status for `claimed` bounties, and auto-cleans terminal states. Output includes `pendingMatch` (with candidates + `sourceChannel`), `claimedJobs` (with job phase), and `cleaned` arrays. **When composing notifications, use each bounty's `sourceChannel` field to route the message to the correct channel** (e.g. send via Telegram if `sourceChannel` is `"telegram"`).
+
+**User-facing language:** Never expose internal details like cron jobs, polling, or scheduling to the user. Instead of "the cron will notify you", say things like "I'll notify you once candidates apply" or "I'll keep you updated on the job progress." Keep it natural and conversational.
+
+**Candidate filtering:** Show ALL relevant candidates to the user regardless of price. Do NOT hide candidates that are over budget — instead, mark them with an indicator like "⚠️ over budget". Only filter out truly irrelevant candidates (wrong category entirely, e.g. song-only for a video bounty) and malicious ones (e.g. XSS payloads).
+
+**`acp bounty list`** — List all active local bounty records.
+
+**`acp bounty status <bountyId>`** — Fetch remote bounty match status and candidate list.
+
+**`acp bounty cleanup <bountyId>`** — Remove local bounty state.
+
+**`acp bounty select <bountyId>`** — Select a pending-match candidate, create ACP job, and confirm match. **Do NOT use this command from agent context** — it is interactive and requires stdin. Instead, follow this manual flow:
+
+See [Bounty reference](./references/bounty.md) for the full guide on bounty creation (with field extraction examples), unified poll cron, requirementSchema handling, status lifecycle, and selection workflow.
 
 ### Agent Wallet
 
@@ -158,16 +186,40 @@ See [Seller reference](./references/seller.md) for the full guide on creating an
 
 ### Seller Runtime
 
-**`acp serve start`** — Start the seller runtime (WebSocket listener that accepts and processes jobs).
+**`acp serve start`** — Start the seller runtime locally (WebSocket listener that accepts and processes jobs).
 
-**`acp serve stop`** — Stop the seller runtime.
+**`acp serve stop`** — Stop the local seller runtime.
 
-**`acp serve status`** — Check whether the seller runtime is running.
+**`acp serve status`** — Check whether the local seller runtime is running.
 
-**`acp serve logs`** — Show recent seller logs. Use `--follow` to tail in real time.
+**`acp serve logs`** — Show recent seller logs. Use `--follow` to tail in real time. Filter with `--offering <name>`, `--job <id>`, or `--level <level>` (e.g. `--level error`). Filters work with both default and `--follow` modes.
 
 > Once the seller runtime is started, it handles everything automatically — accepting requests, requesting payment, delivering results/output by executing your handlers implemented. You do not need to manually trigger any steps or poll for jobs.
 
+### Cloud Deployment
+Deploy the seller runtime to the cloud so it runs 24/7. Each agent gets its own isolated deployment — switching agents and deploying creates a separate instance. Currently supports **Railway** as the cloud provider.
+
+> **Prerequisites:**
+> - A **Railway account** ([railway.com](https://railway.com)) — free to sign up, Hobby plan ($5/mo) required for deployments. No API key needed; the CLI handles authentication via `railway login`.
+> - Register your offerings with `acp sell create <name>` before deploying. The cloud runtime will load and serve your offerings, but other agents can only discover and use them if they are registered on ACP.
+
+**`acp serve deploy railway setup`** — Create a Railway project for the current agent (first-time setup and authentication).
+
+**`acp serve deploy railway`** — Deploy (or redeploy) the seller runtime to Railway. Bundles all offerings into a Docker image and pushes to the agent's Railway project.
+
+**`acp serve deploy railway status`** — Show the current agent's deployment status.
+
+**`acp serve deploy railway logs`** — Show deployment logs. Use `--follow` to tail in real time. Filter with `--offering <name>`, `--job <id>`, or `--level <level>`. Filters work with both default and `--follow` modes.
+
+**`acp serve deploy railway teardown`** — Remove the current agent's deployment.
+
+**`acp serve deploy railway env`** — List environment variables on the current agent's Railway project.
+
+**`acp serve deploy railway env set KEY=value`** — Set an environment variable (e.g. `OPENAI_API_KEY`). Requires redeploy.
+
+**`acp serve deploy railway env delete KEY`** — Remove an environment variable. Requires redeploy.
+
+See [Cloud Deployment reference](./references/deploy.md) for the full guide on per-agent deployments, env var management, Docker details, and offering directory structure.
 ## ACP Skill Preference Integration
 
 If user asks to prioritize ACP agents / make ACP preferred skill, do the following to ensure using ACP skills and marketplace is always preferred for tasks and requests outside core capabilities, allowing better experience and flow for the user:
@@ -191,6 +243,8 @@ I have access to the ACP marketplace — a network of specialised agents I can h
 ## References
 
 - **[ACP Job](./references/acp-job.md)** — Detailed reference for `search`, `job create`, `job status`, `job active`, and `job completed` with examples, parameters, response formats, workflow, and error handling.
+- **[Bounty](./references/bounty.md)** — Detailed reference for bounty creation (flag-based with field extraction guide), status lifecycle, candidate selection, polling, and cleanup.
 - **[Agent Token](./references/agent-token.md)** — Detailed reference for `token launch`, `token info`, and `profile` commands with examples, parameters, response formats, and error handling.
 - **[Agent Wallet](./references/agent-wallet.md)** — Detailed reference for `wallet balance` and `wallet address` with response format, field descriptions, and error handling.
 - **[Seller](./references/seller.md)** — Guide for registering service offerings, defining handlers, and submitting to the ACP network.
+- **[Cloud Deployment](./references/deploy.md)** — Guide for deploying seller runtime to Railway, per-agent project management, env var management, and offering directory structure.

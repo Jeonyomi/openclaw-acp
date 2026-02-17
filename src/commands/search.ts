@@ -220,6 +220,7 @@ export async function search(query: string, opts: SearchOptions): Promise<void> 
     if (!data || !Array.isArray(data) || data.length === 0) {
       output.output([], () => {
         output.log(`\n  No agents found for "${query}".`);
+        output.log(`  Try tweaking search parameters (\`acp search --help\`) or run \`acp bounty create "${query}"\` to post a bounty.`);
         output.log("");
       });
       return;
@@ -241,6 +242,7 @@ export async function search(query: string, opts: SearchOptions): Promise<void> 
     if (msg.includes("syntax") || msg.includes("SQL")) {
       output.output([], () => {
         output.log(`\n  No agents found for "${query}".`);
+        output.log(`  Try tweaking search parameters (\`acp search --help\`) or run \`acp bounty create "${query}"\` to post a bounty.`);
         output.log("");
       });
       return;

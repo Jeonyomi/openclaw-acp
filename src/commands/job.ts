@@ -8,6 +8,7 @@
 import client from "../lib/client.js";
 import { formatPrice } from "../lib/config.js";
 import * as output from "../lib/output.js";
+import { getBountyByJobId } from "../lib/bounty.js";
 
 export async function create(
   agentWalletAddress: string,
@@ -89,6 +90,7 @@ export async function status(jobId: string): Promise<void> {
       deliverable: data.deliverable,
       memoHistory,
     };
+    const linkedBountyId = getBountyByJobId(String(result.jobId))?.bountyId;
 
     output.output(result, (r) => {
       output.heading(`Job ${r.jobId}`);
@@ -105,6 +107,14 @@ export async function status(jobId: string): Promise<void> {
         for (const m of r.memoHistory) {
           output.log(`    [${m.nextPhase}] ${m.content} (${m.createdAt})`);
         }
+      }
+      if (linkedBountyId) {
+        output.log(
+          `\n  This job is linked to bounty ${linkedBountyId}.`
+        );
+        output.log(
+          `  Run \`acp bounty status ${linkedBountyId}\` to sync bounty status.\n`
+        );
       }
       output.log("");
     });
@@ -198,8 +208,7 @@ export async function completed(options: JobListOptions = {}): Promise<void> {
     });
   } catch (e) {
     output.fatal(
-      `Failed to get completed jobs: ${
-        e instanceof Error ? e.message : String(e)
+      `Failed to get completed jobs: ${e instanceof Error ? e.message : String(e)
       }`
     );
   }

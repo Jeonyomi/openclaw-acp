@@ -12,7 +12,7 @@ import {
   type AgentEntry,
 } from "./config.js";
 
-const API_URL = "https://acpx.virtuals.io";
+const API_URL = process.env.ACP_AUTH_URL || "https://acpx.virtuals.io";
 
 // -- Response types --
 

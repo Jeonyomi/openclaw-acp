@@ -225,7 +225,8 @@ export async function create(name: string): Promise<void> {
       ...a,
       active: false,
       apiKey: undefined, // clear other agents' keys
-    }));
+    })) as AgentEntry[];
+
     const newAgent: AgentEntry = {
       id: result.id,
       name: result.name || name,
