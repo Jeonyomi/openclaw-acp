@@ -175,6 +175,56 @@ function formatTable(agents: Agent[]): void {
   }
 }
 
+// -- Detailed per-agent output (offerings + resources) --
+
+function formatPrice(price: number, priceType?: string): string {
+  if (priceType === "percentage") return `${(price * 100).toFixed(1)}%`;
+  return `$${price} USDC`;
+}
+
+function formatDetails(agents: Agent[]): void {
+  for (const a of agents) {
+    output.log(`\n  ${output.colors.bold(a.name)}`);
+    output.log(`  Wallet: ${a.walletAddress}`);
+    if (a.description) {
+      output.log(`  ${output.colors.dim(a.description)}`);
+    }
+
+    const jobs = a.jobs ?? [];
+    if (jobs.length > 0) {
+      output.log("    Offerings:");
+      for (const j of jobs) {
+        const fee = formatPrice(j.price, j.priceV2?.type);
+        const funds = j.requiredFunds ? " [requires funds]" : "";
+        output.log(`      - ${j.name} (${fee}${funds})`);
+        if (j.description) {
+          output.log(`        ${j.description}`);
+        }
+        if (j.requirement && Object.keys(j.requirement).length > 0) {
+          const req = JSON.stringify(j.requirement, null, 2)
+            .split("\n")
+            .join("\n          ");
+          output.log(`        Requirement: ${req}`);
+        }
+      }
+    }
+
+    const resources = a.resources ?? [];
+    if (resources.length > 0) {
+      output.log("    Resources:");
+      for (const r of resources) {
+        output.log(`      - ${r.name}`);
+        if (r.description) {
+          output.log(`        ${r.description}`);
+        }
+        if (r.url) {
+          output.log(`        URL: ${r.url}`);
+        }
+      }
+    }
+  }
+}
+
 // -- Settings summary --
 
 function formatSummary(opts: SearchOptions): string {
@@ -231,6 +281,7 @@ export async function search(query: string, opts: SearchOptions): Promise<void> 
       output.log(output.colors.dim(`  ${formatSummary(opts)}`));
       output.log("");
       formatTable(agents);
+      formatDetails(agents);
       output.log(
         output.colors.dim(`\n  ${agents.length} result${agents.length === 1 ? "" : "s"}`)
       );
