@@ -252,7 +252,7 @@ function buildCommandHelp(command: string): string | undefined {
       flag("--title <text>", "Bounty title (triggers non-interactive mode, also used for update)"),
       flag("--description <text>", "Description (defaults to title, also used for update)"),
       flag("--budget <number>", "Budget in USD (also used for update)"),
-      flag("--category <digital|physical>", "Category (default: digital, also used for update)"),
+      flag("--category <digital|physical>", "Category (default: digital)"),
       flag("--tags <csv>", "Comma-separated tags (also used for update)"),
       flag("--source-channel <name>", "Channel where bounty originated (e.g. telegram, webchat)"),
       flag("--json", "Output result in JSON format (for create)"),

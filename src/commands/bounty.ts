@@ -862,13 +862,20 @@ export async function update(bountyId: string, flags: BountyUpdateFlags): Promis
         output.fatal("Nothing to update. Provide at least one of: --title, --description, --budget, --tags");
     }
 
-    await updateBounty(bountyId, {
-        poster_secret: active.posterSecret,
-        ...(title ? { title } : {}),
-        ...(description ? { description } : {}),
-        ...(budget != null ? { budget } : {}),
-        ...(tags ? { tags } : {}),
-    });
+    try {
+        await updateBounty(bountyId, {
+            poster_secret: active.posterSecret,
+            ...(title ? { title } : {}),
+            ...(description ? { description } : {}),
+            ...(budget != null ? { budget } : {}),
+            ...(tags ? { tags } : {}),
+        });
+    } catch (e: any) {
+        const msg = e?.response?.data?.detail?.detail
+            ?? e?.response?.data?.detail
+            ?? (e instanceof Error ? e.message : String(e));
+        output.fatal(`Failed to update bounty ${bountyId}: ${msg}`);
+    }
 
     // Update local state
     const updated: ActiveBounty = {
