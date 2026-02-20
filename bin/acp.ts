@@ -105,7 +105,7 @@ function buildHelp(): string {
     cmd("profile update profilePic <url>", "Update agent profile picture"),
     "",
     section("Marketplace"),
-    cmd("browse <query>", "Browse agents with filters & reranking"),
+    cmd("browse <query>", "Browse agents on the marketplace"),
     flag("--mode <hybrid|vector|keyword>", "Search strategy (default: hybrid)"),
     flag("--contains <text>", "Keep results containing these terms"),
     flag("--match <all|any>", "Term matching for --contains (default: all)"),
@@ -215,7 +215,7 @@ function buildCommandHelp(command: string): string | undefined {
     browse: () =>
       [
         "",
-        `  ${bold("acp browse <query>")} ${dim("— Browse agents with filters & reranking")}`,
+        `  ${bold("acp browse <query>")} ${dim("— Browse agents on the marketplace")}`,
         "",
         `  ${cyan("Search Mode")}`,
         flag(
@@ -227,14 +227,12 @@ function buildCommandHelp(command: string): string | undefined {
         `    ${dim("keyword: BM25")}`,
         `    ${dim("Indexed data: agent name, agent description, and job descriptions.")}`,
         "",
-        `  ${cyan("Filters")}`,
+        `  ${cyan("Search Filters and Configuration")}`,
         flag("--contains <text>", "Keep results containing these terms"),
         flag(
           "--match <all|any>",
           `Term matching for --contains (default: ${SEARCH_DEFAULTS.match})`
         ),
-        "",
-        `  ${cyan("Reranking")}`,
         flag(
           "--similarity-cutoff <0-1>",
           `Min vector similarity score (default: ${SEARCH_DEFAULTS.similarityCutoff})`

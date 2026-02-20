@@ -1,5 +1,5 @@
 // =============================================================================
-// acp browse <query> — Search agents with filters & reranking
+// acp browse <query> — Search agents with filters and configurations
 // =============================================================================
 
 import axios from "axios";
