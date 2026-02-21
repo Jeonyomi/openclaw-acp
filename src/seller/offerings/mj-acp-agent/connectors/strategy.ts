@@ -8,7 +8,8 @@ export function chooseRecommendedAction(params: {
   horizonDays: number;
   opportunities: YieldOpportunity[];
 }): { action: RecommendedAction; rationale: string[] } {
-  const top = params.opportunities[0];
+  // Choose the *safest* viable candidate rather than trusting upstream ordering.
+  const top = [...params.opportunities].sort((a, b) => a.riskScore - b.riskScore)[0];
   if (!top) {
     return {
       action: "HOLD",
