@@ -78,7 +78,12 @@ export async function start(): Promise<void> {
   }
 
   const sellerScript = path.resolve(__dirname, "..", "seller", "runtime", "seller.ts");
-  const tsxBin = path.resolve(ROOT, "node_modules", ".bin", "tsx");
+
+  // On Windows, binaries in node_modules/.bin are typically *.cmd wrappers.
+  const tsxBin =
+    process.platform === "win32"
+      ? path.resolve(ROOT, "node_modules", ".bin", "tsx.cmd")
+      : path.resolve(ROOT, "node_modules", ".bin", "tsx");
 
   ensureLogsDir();
   const logFd = fs.openSync(SELLER_LOG_PATH, "a");

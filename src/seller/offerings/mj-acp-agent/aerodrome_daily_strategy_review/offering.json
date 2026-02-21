@@ -1,0 +1,50 @@
+{
+  "name": "aerodrome_daily_strategy_review",
+  "description": "Daily strategy brief for Aerodrome (Base). We review current conditions and propose a conservative, execution-lite plan aligned with your Max Loss (DD) and Target Profit (TP). Deliverable includes: top pools snapshot, risk flags, recommended action (HOLD/DEPLOY/REDUCE/EXIT), and a structured checklist for manual execution.",
+  "jobFee": 0.01,
+  "jobFeeType": "fixed",
+  "requiredFunds": false,
+  "requirement": {
+    "chain": { "type": "string", "required": true, "description": "Network (e.g., base)" },
+    "budgetUSDC": {
+      "type": "string",
+      "required": true,
+      "description": "Budget in USDC (human-readable, e.g. 1000)"
+    },
+    "maxLossPct": {
+      "type": "string",
+      "required": true,
+      "description": "Max loss / drawdown allowed in % (e.g. 3)"
+    },
+    "targetProfitPct": {
+      "type": "string",
+      "required": true,
+      "description": "Target profit in % (e.g. 5)"
+    },
+    "horizonDays": {
+      "type": "string",
+      "required": true,
+      "description": "Strategy horizon in days (e.g. 7 or 30)"
+    },
+    "rebalanceCadence": {
+      "type": "string",
+      "required": false,
+      "description": "Cadence (e.g. daily). Optional."
+    },
+    "riskMode": {
+      "type": "string",
+      "required": false,
+      "description": "conservative|balanced (optional)"
+    },
+    "poolSelection": {
+      "type": "string",
+      "required": false,
+      "description": "Selection rule (e.g. tvl_top5_all). Optional."
+    },
+    "notes": {
+      "type": "string",
+      "required": false,
+      "description": "Optional additional constraints or context."
+    }
+  }
+}
