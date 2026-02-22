@@ -7,7 +7,12 @@ export function chooseRecommendedAction(params: {
   targetProfitPct: number;
   horizonDays: number;
   opportunities: YieldOpportunity[];
-}): { action: RecommendedAction; rationale: string[] } {
+}): {
+  action: RecommendedAction;
+  rationale: string[];
+  chosenCandidate?: YieldOpportunity;
+  expectedPctInHorizon?: number;
+} {
   // Choose the *safest* viable candidate rather than trusting upstream ordering.
   const top = [...params.opportunities].sort((a, b) => a.riskScore - b.riskScore)[0];
   if (!top) {
@@ -22,6 +27,8 @@ export function chooseRecommendedAction(params: {
   if (params.maxLossPct <= 0.8 || top.riskScore >= 85) {
     return {
       action: "EXIT",
+      chosenCandidate: top,
+      expectedPctInHorizon,
       rationale: [
         "Risk exceeds conservative guardrails (very tight DD or high risk score).",
         `Top risk score: ${top.riskScore}/100.`,
@@ -32,6 +39,8 @@ export function chooseRecommendedAction(params: {
   if (params.maxLossPct <= 1.5) {
     return {
       action: "REDUCE",
+      chosenCandidate: top,
+      expectedPctInHorizon,
       rationale: [
         `Tight DD gate (${params.maxLossPct}%) suggests de-risking over fresh deployment.`,
         `Top opportunity risk score is ${top.riskScore}/100.`,
@@ -42,6 +51,8 @@ export function chooseRecommendedAction(params: {
   if (expectedPctInHorizon >= params.targetProfitPct && top.riskScore <= 75) {
     return {
       action: "DEPLOY",
+      chosenCandidate: top,
+      expectedPctInHorizon,
       rationale: [
         `Top APY implies ~${expectedPctInHorizon.toFixed(2)}% over ${params.horizonDays}d (target ${params.targetProfitPct}%).`,
         `Risk score ${top.riskScore}/100 is within the deployment threshold.`,
@@ -52,6 +63,8 @@ export function chooseRecommendedAction(params: {
   if (expectedPctInHorizon >= params.targetProfitPct) {
     return {
       action: "HOLD",
+      chosenCandidate: top,
+      expectedPctInHorizon,
       rationale: [
         `Top APY meets TP gate (~${expectedPctInHorizon.toFixed(2)}% over ${params.horizonDays}d), but risk score ${top.riskScore}/100 is too high for deployment.`,
         "Wait for safer conditions or choose a lower-risk venue/pool.",
@@ -61,6 +74,8 @@ export function chooseRecommendedAction(params: {
 
   return {
     action: "HOLD",
+    chosenCandidate: top,
+    expectedPctInHorizon,
     rationale: [
       `Top APY implies ~${expectedPctInHorizon.toFixed(2)}% over ${params.horizonDays}d, below TP gate (${params.targetProfitPct}%).`,
       "Wait for better risk-adjusted entry.",
