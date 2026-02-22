@@ -14,6 +14,16 @@ export interface YieldOpportunity {
   ilRisk: string;
 }
 
+export interface YieldSelectionStats {
+  total: number;
+  afterChainFilter: number;
+  afterScopeFilter: number;
+  afterTokenFilter: number;
+  excludedByApyCap: number;
+  excludedByMinTvl: number;
+  returned: number;
+}
+
 interface DefiLlamaPool {
   chain?: string;
   project?: string;
@@ -103,39 +113,56 @@ export async function fetchBaseYieldOpportunities(params: {
   scope: Scope;
   tokenPreference: TokenPreference;
   limit?: number;
-}): Promise<YieldOpportunity[]> {
+}): Promise<{ opportunities: YieldOpportunity[]; stats: YieldSelectionStats }> {
   const pools = await fetchPools();
   const limit = params.limit ?? 10;
 
-  return (
-    pools
-      .filter((pool) => String(pool.chain ?? "").toLowerCase() === "base")
-      .filter((pool) => matchesScope(String(pool.project ?? ""), params.scope))
-      .filter((pool) => matchesTokenPreference(String(pool.symbol ?? ""), params.tokenPreference))
-      // Base safety: avoid extreme APY outliers and tiny pools.
-      .filter((pool) => Number(pool.apy ?? 0) > 0)
-      .filter((pool) => Number(pool.apy ?? 0) <= 500)
-      .filter((pool) => Number(pool.tvlUsd ?? 0) >= 1_000_000)
-      .map((pool) => {
-        const apy = Number(pool.apy ?? 0);
-        const tvlUsd = Number(pool.tvlUsd ?? 0);
-        const riskScore = computeRiskScore(pool);
-        const o = {
-          venue: toVenue(String(pool.project ?? "unknown")),
-          poolId: String(pool.pool ?? "unknown"),
-          symbol: String(pool.symbol ?? "UNKNOWN"),
-          apy,
-          tvlUsd,
-          ageDays: Number(pool.count ?? 0),
-          ilRisk: String(pool.ilRisk ?? "unknown"),
-          riskScore,
-        };
-        return { ...o, _score: computeOpportunityScore(o) };
-      })
-      .sort((a, b) => b._score - a._score)
-      .slice(0, limit)
-      .map(({ _score, ...rest }) => rest)
+  const total = pools.length;
+  const byChain = pools.filter((pool) => String(pool.chain ?? "").toLowerCase() === "base");
+  const byScope = byChain.filter((pool) => matchesScope(String(pool.project ?? ""), params.scope));
+  const byToken = byScope.filter((pool) =>
+    matchesTokenPreference(String(pool.symbol ?? ""), params.tokenPreference)
   );
+
+  const excludedByApyCap = byToken.filter((pool) => Number(pool.apy ?? 0) > 500).length;
+  const excludedByMinTvl = byToken.filter((pool) => Number(pool.tvlUsd ?? 0) < 1_000_000).length;
+
+  const opportunities = byToken
+    // Base safety: avoid extreme APY outliers and tiny pools.
+    .filter((pool) => Number(pool.apy ?? 0) > 0)
+    .filter((pool) => Number(pool.apy ?? 0) <= 500)
+    .filter((pool) => Number(pool.tvlUsd ?? 0) >= 1_000_000)
+    .map((pool) => {
+      const apy = Number(pool.apy ?? 0);
+      const tvlUsd = Number(pool.tvlUsd ?? 0);
+      const riskScore = computeRiskScore(pool);
+      const o = {
+        venue: toVenue(String(pool.project ?? "unknown")),
+        poolId: String(pool.pool ?? "unknown"),
+        symbol: String(pool.symbol ?? "UNKNOWN"),
+        apy,
+        tvlUsd,
+        ageDays: Number(pool.count ?? 0),
+        ilRisk: String(pool.ilRisk ?? "unknown"),
+        riskScore,
+      };
+      return { ...o, _score: computeOpportunityScore(o) };
+    })
+    .sort((a, b) => b._score - a._score)
+    .slice(0, limit)
+    .map(({ _score, ...rest }) => rest);
+
+  const stats: YieldSelectionStats = {
+    total,
+    afterChainFilter: byChain.length,
+    afterScopeFilter: byScope.length,
+    afterTokenFilter: byToken.length,
+    excludedByApyCap,
+    excludedByMinTvl,
+    returned: opportunities.length,
+  };
+
+  return { opportunities, stats };
 }
 
 export async function fetchAerodromeTop5SafePools(): Promise<YieldOpportunity[]> {
