@@ -69,8 +69,9 @@ export async function executeJob(request: any): Promise<ExecuteJobResult> {
   const scope = normStr(request?.scope, "all").toLowerCase() as Scope;
   const tokenPreference = normStr(
     request?.tokenPreference,
-    "mixed"
+    "USDC"
   ).toUpperCase() as TokenPreference;
+  const outputMode = normStr(request?.outputMode, "user").toLowerCase();
   const rebalanceCadence = normStr(request?.rebalanceCadence, "daily");
 
   const slippageMaxPct = riskMode === "balanced" ? 1.0 : 0.5;
@@ -91,8 +92,48 @@ export async function executeJob(request: any): Promise<ExecuteJobResult> {
     opportunities,
   });
 
+  const debugView = {
+    recommendedAction,
+    liveOpportunities: opportunities,
+    selectionStats: stats,
+  };
+
+  const topPools = aerodromeTop5.slice(0, 3).map((p) => ({
+    symbol: p.symbol,
+    tvlUsd: p.tvlUsd,
+    apy: p.apy,
+    riskScore: p.riskScore,
+    ilRisk: p.ilRisk,
+  }));
+
+  const userView = {
+    action: recommendedAction.action,
+    why: recommendedAction.rationale,
+    chosen: recommendedAction.chosenCandidate
+      ? {
+          venue: recommendedAction.chosenCandidate.venue,
+          symbol: recommendedAction.chosenCandidate.symbol,
+          apy: recommendedAction.chosenCandidate.apy,
+          tvlUsd: recommendedAction.chosenCandidate.tvlUsd,
+          riskScore: recommendedAction.chosenCandidate.riskScore,
+          ilRisk: recommendedAction.chosenCandidate.ilRisk,
+        }
+      : null,
+    expectedPctInHorizon: recommendedAction.expectedPctInHorizon ?? null,
+    topPools,
+    guardrails: {
+      maxLossPct,
+      targetProfitPct,
+      horizonDays,
+      slippageMaxPct,
+      maxPctPerVenue: positionMaxPctPerVenue,
+      maxPctPerPool: positionMaxPctPerPool,
+      rebalanceCadence,
+    },
+  };
+
   const deliverable = {
-    version: "v1",
+    version: "v2",
     chain: "base",
     offering: "base_daily_yield_strategy_review",
     dataSource: "defillama-yields",
@@ -107,10 +148,10 @@ export async function executeJob(request: any): Promise<ExecuteJobResult> {
       tokenPreference,
       rebalanceCadence,
       notes: request?.notes || null,
+      outputMode,
     },
-    recommendedAction,
-    liveOpportunities: opportunities,
-    selectionStats: stats,
+    userView,
+    ...(outputMode === "debug" ? { debugView } : {}),
     aerodromeTVLTop5Safe: aerodromeTop5,
     allocationTemplate: {
       venues,

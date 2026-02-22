@@ -1,0 +1,60 @@
+{
+  "name": "base_daily_yield_strategy_review",
+  "description": "Daily strategy brief for Base chain yield. Scope includes Aerodrome (DEX/LP) and lending venues (e.g., Aave V3, Morpho/Moonwell). Provides an execution-lite plan aligned with Max Loss (DD) and Target Profit (TP): recommended action, suggested allocation, top opportunities, and a conservative checklist for manual execution.",
+  "jobFee": 0.1,
+  "jobFeeType": "fixed",
+  "requiredFunds": false,
+  "requirement": {
+    "chain": { "type": "string", "required": true, "description": "Network (base)" },
+    "budgetUSDC": {
+      "type": "string",
+      "required": true,
+      "description": "Budget in USDC (human-readable, e.g. 1000)"
+    },
+    "maxLossPct": {
+      "type": "string",
+      "required": true,
+      "description": "Max loss / drawdown allowed in % (e.g. 3)"
+    },
+    "targetProfitPct": {
+      "type": "string",
+      "required": true,
+      "description": "Target profit in % (e.g. 5)"
+    },
+    "horizonDays": {
+      "type": "string",
+      "required": true,
+      "description": "Strategy horizon in days (7|14|30)"
+    },
+    "rebalanceCadence": {
+      "type": "string",
+      "required": false,
+      "description": "Cadence (default: daily)"
+    },
+    "riskMode": {
+      "type": "string",
+      "required": false,
+      "description": "conservative|balanced (default: conservative)"
+    },
+    "scope": {
+      "type": "string",
+      "required": false,
+      "description": "aerodrome|lending|all (default: all)"
+    },
+    "tokenPreference": {
+      "type": "string",
+      "required": false,
+      "description": "USDC|ETH|mixed (default: USDC)"
+    },
+    "outputMode": {
+      "type": "string",
+      "required": false,
+      "description": "user|debug (default: user)"
+    },
+    "notes": {
+      "type": "string",
+      "required": false,
+      "description": "Optional constraints or context."
+    }
+  }
+}
