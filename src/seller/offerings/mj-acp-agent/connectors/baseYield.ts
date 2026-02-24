@@ -37,18 +37,7 @@ interface DefiLlamaPool {
 
 const YIELDS_ENDPOINT = "https://yields.llama.fi/pools";
 const LENDING_PROJECTS = new Set(["aave-v3", "morpho-blue", "moonwell"]);
-const RISKY_TOKEN_BLACKLIST = [
-  "DOG",
-  "PEPE",
-  "FLOKI",
-  "SHIB",
-  "MEME",
-  "DEGEN",
-  "BRETT",
-  "MOG",
-  "WOJAK",
-  "INU",
-];
+import { POLICY, RISKY_TOKEN_BLACKLIST } from "./policy.js";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -124,14 +113,18 @@ export async function fetchBaseYieldOpportunities(params: {
     matchesTokenPreference(String(pool.symbol ?? ""), params.tokenPreference)
   );
 
-  const excludedByApyCap = byToken.filter((pool) => Number(pool.apy ?? 0) > 500).length;
-  const excludedByMinTvl = byToken.filter((pool) => Number(pool.tvlUsd ?? 0) < 1_000_000).length;
+  const excludedByApyCap = byToken.filter(
+    (pool) => Number(pool.apy ?? 0) > POLICY.APY_CAP_PCT
+  ).length;
+  const excludedByMinTvl = byToken.filter(
+    (pool) => Number(pool.tvlUsd ?? 0) < POLICY.MIN_TVL_USD
+  ).length;
 
   const opportunities = byToken
     // Base safety: avoid extreme APY outliers and tiny pools.
     .filter((pool) => Number(pool.apy ?? 0) > 0)
-    .filter((pool) => Number(pool.apy ?? 0) <= 500)
-    .filter((pool) => Number(pool.tvlUsd ?? 0) >= 1_000_000)
+    .filter((pool) => Number(pool.apy ?? 0) <= POLICY.APY_CAP_PCT)
+    .filter((pool) => Number(pool.tvlUsd ?? 0) >= POLICY.MIN_TVL_USD)
     .map((pool) => {
       const apy = Number(pool.apy ?? 0);
       const tvlUsd = Number(pool.tvlUsd ?? 0);

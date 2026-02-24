@@ -1,6 +1,23 @@
 import type { ExecuteJobResult, ValidationResult } from "../../../runtime/offeringTypes.js";
+import { fetchAerodromeTop5SafePools } from "../connectors/baseYield.js";
+import { POLICY, RISKY_TOKEN_BLACKLIST } from "../connectors/policy.js";
+import { chooseRecommendedAction } from "../connectors/strategy.js";
 
-function toNum(v: any): number | null {
+type RiskMode = "conservative" | "balanced";
+
+type AerodromeDailyRequest = {
+  chain: "base";
+  budgetUSDC: string;
+  maxLossPct: string;
+  targetProfitPct: string;
+  horizonDays: string;
+  rebalanceCadence?: string;
+  riskMode?: RiskMode;
+  poolSelection?: string;
+  notes?: string;
+};
+
+function toNum(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(String(v).trim());
   return Number.isFinite(n) ? n : null;
@@ -10,15 +27,22 @@ function pick<T>(v: T | undefined | null, fallback: T): T {
   return v === undefined || v === null ? fallback : v;
 }
 
-export function validateRequirements(request: any): ValidationResult {
-  const chain = String(request?.chain || "").toLowerCase();
+function asRequest(input: unknown): Partial<AerodromeDailyRequest> {
+  return (
+    typeof input === "object" && input !== null ? input : {}
+  ) as Partial<AerodromeDailyRequest>;
+}
+
+export function validateRequirements(request: unknown): ValidationResult {
+  const req = asRequest(request);
+  const chain = String(req.chain || "").toLowerCase();
   if (!chain) return { valid: false, reason: "Missing chain" };
   if (chain !== "base") return { valid: false, reason: "Only chain=base is supported in MVP" };
 
-  const budget = toNum(request?.budgetUSDC);
-  const dd = toNum(request?.maxLossPct);
-  const tp = toNum(request?.targetProfitPct);
-  const horizon = toNum(request?.horizonDays);
+  const budget = toNum(req.budgetUSDC);
+  const dd = toNum(req.maxLossPct);
+  const tp = toNum(req.targetProfitPct);
+  const horizon = toNum(req.horizonDays);
 
   if (budget === null || budget <= 0)
     return { valid: false, reason: "budgetUSDC must be a positive number" };
@@ -29,33 +53,44 @@ export function validateRequirements(request: any): ValidationResult {
   if (horizon === null || ![7, 14, 30].includes(horizon))
     return { valid: false, reason: "horizonDays must be one of: 7, 14, 30" };
 
+  const riskMode = String(req.riskMode || "conservative").toLowerCase();
+  if (!["conservative", "balanced"].includes(riskMode)) {
+    return { valid: false, reason: "riskMode must be one of: conservative, balanced" };
+  }
+
   return { valid: true };
 }
 
-export function requestPayment(_request: any): string {
-  // This offering is configured as free (jobFee=0). This message is kept for compatibility.
+export function requestPayment(_request: unknown): string {
   return "Request accepted";
 }
 
-export async function executeJob(request: any): Promise<ExecuteJobResult> {
-  const riskMode = pick(String(request?.riskMode || "conservative"), "conservative");
-  const poolSelection = pick(String(request?.poolSelection || "tvl_top5_all"), "tvl_top5_all");
-  const rebalanceCadence = pick(String(request?.rebalanceCadence || "daily"), "daily");
+export async function executeJob(request: unknown): Promise<ExecuteJobResult> {
+  const req = asRequest(request);
 
-  const budgetUSDC = Number(String(request?.budgetUSDC).trim());
-  const maxLossPct = Number(String(request?.maxLossPct).trim());
-  const targetProfitPct = Number(String(request?.targetProfitPct).trim());
-  const horizonDays = Number(String(request?.horizonDays).trim());
+  const riskMode = pick(String(req.riskMode || "conservative"), "conservative") as RiskMode;
+  const poolSelection = pick(String(req.poolSelection || "tvl_top5_all"), "tvl_top5_all");
+  const rebalanceCadence = pick(String(req.rebalanceCadence || "daily"), "daily");
 
-  // MVP NOTE:
-  // - We are not executing trades here.
-  // - We are not yet fetching on-chain TVL Top5 automatically.
-  // - Deliverable is a structured strategy brief and execution checklist.
+  const budgetUSDC = Number(String(req.budgetUSDC).trim());
+  const maxLossPct = Number(String(req.maxLossPct).trim());
+  const targetProfitPct = Number(String(req.targetProfitPct).trim());
+  const horizonDays = Number(String(req.horizonDays).trim());
+
+  const top5SafePools = await fetchAerodromeTop5SafePools();
+  const recommendation = chooseRecommendedAction({
+    maxLossPct,
+    targetProfitPct,
+    horizonDays,
+    opportunities: top5SafePools,
+  });
 
   const deliverable = {
-    version: "v0",
+    version: "v1",
     protocol: "aerodrome",
     chain: "base",
+    dataSource: "defillama-yields",
+    generatedAt: new Date().toISOString(),
     inputs: {
       budgetUSDC,
       maxLossPct,
@@ -64,36 +99,42 @@ export async function executeJob(request: any): Promise<ExecuteJobResult> {
       riskMode,
       poolSelection,
       rebalanceCadence,
-      notes: request?.notes || null,
+      notes: req.notes || null,
     },
-    recommendation: {
-      action: "HOLD",
-      rationale: [
-        "MVP produces an execution-lite daily plan. For now, we default to HOLD unless a pool list + metrics feed is provided.",
-        "Next iteration will compute Top5 pools by TVL and recommend DEPLOY/REDUCE/EXIT based on risk gates.",
-      ],
+    recommendation,
+    top5PoolsByTVLSafe: top5SafePools,
+    safetyFilters: {
+      minAgeDays: 7,
+      blacklistApplied: true,
+      blacklistKeywords: [...RISKY_TOKEN_BLACKLIST],
     },
     riskGates: {
       maxDrawdownPct: maxLossPct,
       targetProfitPct,
-      slippageMaxPct: riskMode === "balanced" ? 1.0 : 0.5,
-      positionMaxPctPerPool: riskMode === "balanced" ? 35 : 25,
+      slippageMaxPct:
+        riskMode === "balanced"
+          ? POLICY.SLIPPAGE_MAX_PCT_BALANCED
+          : POLICY.SLIPPAGE_MAX_PCT_CONSERVATIVE,
+      positionMaxPctPerPool:
+        riskMode === "balanced"
+          ? POLICY.POSITION_MAX_PCT_PER_POOL_BALANCED
+          : POLICY.POSITION_MAX_PCT_PER_POOL_CONSERVATIVE,
       rebalanceCadence,
     },
     todayChecklist: [
       "Confirm Base network and sufficient ETH for gas.",
-      "Check Aerodrome top pools list (TVL) and verify token contracts are reputable.",
+      "Use top5PoolsByTVLSafe only (age >=7d and blacklist filter applied).",
       "If deploying: split budget across pools within positionMaxPctPerPool.",
       "Record entry snapshot (pool, amounts, txHash) for tomorrow's review.",
-      "If DD breaches maxLossPct: propose reduction/exit next cycle.",
-    ],
-    requiredNextDataForAutomation: [
-      "Top5 pools by TVL (pool addresses) on Aerodrome (Base)",
-      "Per-pool TVL, fees APR, incentive APR, and 24h volatility proxies",
-      "User wallet holdings (read-only) for PnL / drawdown estimation",
+      "If DD breaches maxLossPct: switch to REDUCE/EXIT next cycle.",
     ],
     outputFormat: "json",
   };
 
-  return { deliverable };
+  return {
+    deliverable: {
+      type: "json",
+      value: deliverable,
+    },
+  };
 }

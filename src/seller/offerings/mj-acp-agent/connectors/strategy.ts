@@ -1,4 +1,5 @@
 import type { YieldOpportunity } from "./baseYield.js";
+import { POLICY } from "./policy.js";
 
 export type RecommendedAction = "HOLD" | "DEPLOY" | "REDUCE" | "EXIT";
 
@@ -24,7 +25,7 @@ export function chooseRecommendedAction(params: {
 
   const expectedPctInHorizon = (top.apy * params.horizonDays) / 365;
 
-  if (params.maxLossPct <= 0.8 || top.riskScore >= 85) {
+  if (params.maxLossPct <= POLICY.DD_EXIT_MAX || top.riskScore >= POLICY.RISK_SCORE_EXIT_MIN) {
     return {
       action: "EXIT",
       chosenCandidate: top,
@@ -36,7 +37,7 @@ export function chooseRecommendedAction(params: {
     };
   }
 
-  if (params.maxLossPct <= 1.5) {
+  if (params.maxLossPct <= POLICY.DD_REDUCE_MAX) {
     return {
       action: "REDUCE",
       chosenCandidate: top,
@@ -48,7 +49,10 @@ export function chooseRecommendedAction(params: {
     };
   }
 
-  if (expectedPctInHorizon >= params.targetProfitPct && top.riskScore <= 75) {
+  if (
+    expectedPctInHorizon >= params.targetProfitPct &&
+    top.riskScore <= POLICY.RISK_SCORE_DEPLOY_MAX
+  ) {
     return {
       action: "DEPLOY",
       chosenCandidate: top,
